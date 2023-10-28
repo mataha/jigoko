@@ -1,0 +1,5 @@
+* text=auto eol=lf
+
+*.bat text eol=crlf
+*.cmd text eol=crlf
+*.reg text eol=crlf working-tree-encoding=UTF-16LE-BOM

@@ -1,0 +1,11 @@
+*~
+
+# clangd
+compile-commands.json
+
+# zig
+zig-cache/
+zig-out/
+
+# zigw
+.zig

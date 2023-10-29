@@ -29,18 +29,48 @@
 
     @(verify "" || setlocal DisableDelayedExpansion EnableExtensions) 2>nul || (
         (echo(error: could not enable Command Extensions)
-    ) >&2 && goto :EOF
+    ) >&2 && (call) && goto :EOF
 
     @if not defined DEBUG (echo off)
 
 :main ()
-    set "system=windows"
+    for /f "delims=" %%p in (""%~dp0."") do (set "root=%%~fp")
 
-    if not defined root (call :get_workspace_root root)
+    setlocal EnableDelayedExpansion
 
-    for /f "usebackq tokens=1,2 delims==, " %%a in ("%root%\build.zig.zon") do (
-        if not defined version if ".minimum_zig_version" equ "%%~a" (set "version=%%~b")
+    set "zon="
+
+    for /f delims^=^ eol^= %%l in ('"type "%root%\build.zig.zon""') do (
+        set "zon=!zon!%%l"
     )
+
+    if not defined zon echo error
+
+    set "zon=!zon:~2,-1!"
+    set "zon=!zon: =!"
+    set "zon=!zon:{=,!"
+    set "zon=!zon:}=, !"
+    set "scope=0"
+
+    (set \n=^
+
+) & for /f delims^=^ eol^= %%s in ("!zon!") do (
+        set "line=%%s"
+        for %%l in ("!\n!") do for /f "delims=" %%p in ("!line:,=%%~l!") do (
+            for /f "tokens=1,* delims==" %%x in ("%%p") do (
+                if "%%~y" == "" if not "%%x" == "%%p" (
+                    set /a "scope+=1"
+                )
+                if "%%p" == " " (
+                    set /a "scope-=1"
+                )
+                if "%%x" == ".minimum_zig_version" if !scope! equ 0 (
+                    set "version=%%~y"
+                )
+            )
+        )
+    )
+    endlocal & set "version=%version%"
 
     if not defined version (
         echo couldn't read version from build.zig.zon
@@ -65,15 +95,15 @@
         goto :EOF
     )
 
-    set "release=zig-%system%-%architecture%-%version%"
-    set "exe=%root%\.zig\%release%\zig.exe"
+    set "release=zig-windows-%architecture%-%version%"
+    set "exe=%USERPROFILE%\.zig\%release%\zig.exe"
 
     for /f "delims=" %%e in (""%exe%"") do (
         for /f "tokens=1,* delims=d" %%a in ("-%%~ae") do if not "%%b" equ "" (
             echo(wth, %exe% it's a directory>&2
             goto :EOF
         ) else if "%%a" equ "-" (
-            call :download
+            call :download || goto :EOF
         )
     )
 
@@ -101,19 +131,14 @@
     )
 
 :extract
-    mkdir "%root%\.zig" 2>nul
+    mkdir "%USERPROFILE%\.zig" 2>nul
     echo Extracting %zip%...
     ::: todo extracting without tar available
     ::: todo fallback to unzip: unzip "%zip%" -d "%root%\.zig"
-    "%SystemRoot%\System32\tar.exe" -xf "%zip%" -C "%root%\.zig" || (
-        ecHO snafu: couldn't extract %zip% to %root%\.zig
+    "%SystemRoot%\System32\tar.exe" -xf "%zip%" -C "%USERPROFILE%\.zig" || (
+        ecHO snafu: couldn't extract %zip% to %USERPROFILE%\.zig
         goto :EOF
     )
-
-    goto :EOF
-
-:get_workspace_root (out root: string)
-    for /f "delims=" %%p in (""%~dp0."") do (set "%~1=%%~fp")
 
     goto :EOF
 

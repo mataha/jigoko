@@ -1,4 +1,4 @@
-*~
+*.toml
 
 # clangd
 compile-commands.json
@@ -6,6 +6,3 @@ compile-commands.json
 # zig
 zig-cache/
 zig-out/
-
-# zigw
-.zig
